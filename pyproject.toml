@@ -27,8 +27,14 @@ xex = [
 ]
 dev = [
     "pytest>=7.4",
-    "ruff>=0.4",
-    "mypy>=1.8",
+    # Pinned exactly (not >=): CI installs a fresh "ruff check ."/"mypy" on
+    # every run, and these two tools change lint behavior across releases
+    # (new default rules, stricter checks) often enough that a loose bound
+    # lets local and CI disagree about whether the same code passes. Bump
+    # deliberately, verifying `ruff check .`/`mypy` output doesn't change
+    # unexpectedly, rather than letting `pip install` silently drift.
+    "ruff==0.16.8",
+    "mypy==2.3.1",
     "undname>=0.2",
     "cryptography>=41",
 ]

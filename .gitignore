@@ -23,8 +23,12 @@ __pycache__/
 .eggs/
 .venv/
 venv/
-build/
-dist/
+# Anchored to the repo root: an unanchored "build/" also matches the real
+# src/fncre/build/ package (build-identity verification), which must stay
+# tracked. This previously caused git to silently drop that package from
+# every commit — see docs/legacy-compatibility.md's Phase 3 follow-up note.
+/build/
+/dist/
 .pytest_cache/
 .mypy_cache/
 .ruff_cache/
