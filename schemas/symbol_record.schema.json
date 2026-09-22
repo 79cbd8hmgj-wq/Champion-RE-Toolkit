@@ -1,0 +1,91 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/79cbd8hmgj-wq/Champion-RE-Toolkit/schemas/symbol_record.schema.json",
+  "title": "fncre Symbol Record",
+  "description": "JSON shape of one fncre.symbols.models.Symbol, as emitted by `fncre symbols ... --json` and `fncre map index --json`.",
+  "type": "object",
+  "properties": {
+    "raw_name": {
+      "type": "string",
+      "description": "Symbol name exactly as it appeared in the MAP, whitespace-trimmed only."
+    },
+    "name": {
+      "type": "string",
+      "description": "Normalized name used for lookups (internal whitespace runs collapsed)."
+    },
+    "demangled_name": {
+      "type": ["string", "null"],
+      "description": "The MAP's own human-readable form, if raw_name already looked undecorated. Null when raw_name is MSVC-mangled and no demangler has been applied (see docs/provenance.md)."
+    },
+    "is_mangled": {
+      "type": "boolean",
+      "description": "True if raw_name starts with '?' (MSVC decoration marker)."
+    },
+    "address": {
+      "type": ["integer", "null"],
+      "minimum": 0,
+      "description": "Absolute runtime address (Rva+Base), if the MAP provided one."
+    },
+    "segment": {
+      "type": ["integer", "null"],
+      "description": "Segment number from the 'segment:offset' column."
+    },
+    "offset": {
+      "type": ["integer", "null"],
+      "description": "Offset within the segment."
+    },
+    "section": {
+      "type": ["string", "null"],
+      "description": "Section name resolved via the segment table (e.g. '.text'), if known."
+    },
+    "library": {
+      "type": ["string", "null"],
+      "description": "Library name from the 'Lib:Object' column, if present."
+    },
+    "object_name": {
+      "type": ["string", "null"],
+      "description": "Object file name from the 'Lib:Object' column."
+    },
+    "visibility": {
+      "type": "string",
+      "enum": ["public", "static"],
+      "description": "Which MAP symbol-table section the symbol was listed under."
+    },
+    "is_function": {
+      "type": ["boolean", "null"],
+      "description": "True/False if the MAP's function flag ('f') made this determinable; null if unknown."
+    },
+    "order_index": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "0-based index in overall parse order (stable across public/static)."
+    },
+    "source_line": {
+      "type": "integer",
+      "minimum": 1,
+      "description": "1-based line number in the source MAP file."
+    },
+    "namespace_path": {
+      "type": ["string", "null"],
+      "description": "Everything before the final '::' in name, e.g. 'FightSim'. Null if flat or mangled."
+    },
+    "leaf": {
+      "type": ["string", "null"],
+      "description": "The final '::'-separated component of name, e.g. 'UpdateEnergy'."
+    },
+    "address_hex": {
+      "type": "string",
+      "pattern": "^0x[0-9A-F]{8}$",
+      "description": "CLI-only convenience field: address formatted as 0xXXXXXXXX. Present only when address is not null."
+    }
+  },
+  "required": [
+    "raw_name",
+    "name",
+    "is_mangled",
+    "visibility",
+    "order_index",
+    "source_line"
+  ],
+  "additionalProperties": false
+}

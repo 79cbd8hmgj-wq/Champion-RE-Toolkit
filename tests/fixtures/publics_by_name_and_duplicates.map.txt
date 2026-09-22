@@ -1,0 +1,22 @@
+ dupmodule
+
+ Timestamp is 00000000 (Thu Jan 01 00:00:00 1970)
+
+ Preferred load address is 82000000
+
+ Start         Length     Name                   Class
+ 0001:00000000 00000200H .text                   CODE
+
+  Address         Publics by Value              Rva+Base       Lib:Object
+
+ 0001:00000000       Alpha::One                   82000000 f   alpha:alpha.obj
+ 0001:00000010       Alpha::Two                   82000010 f   alpha:alpha.obj
+ 0001:00000020       Alpha::One                   82000020 f   alpha:alpha2.obj
+ 0001:00000030       Beta::Aliased                82000010 f   beta:beta.obj
+
+  Address         Publics by Name               Rva+Base       Lib:Object
+
+ 0001:00000010       Alpha::Two                   82000010 f   alpha:alpha.obj
+ 0001:00000000       Alpha::One                   82000000 f   alpha:alpha.obj
+
+ entry point at        0001:00000000

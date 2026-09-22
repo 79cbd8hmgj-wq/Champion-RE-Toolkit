@@ -1,0 +1,35 @@
+ fn5d
+
+ Timestamp is 4a1b2c3d (Mon Nov 23 10:15:41 2009)
+
+ Preferred load address is 82000000
+
+ Start         Length     Name                   Class
+ 0001:00000000 00123456H .text                   CODE
+ 0002:00000000 00023456H .rdata                  DATA
+ 0003:00000000 00003456H .data                   DATA
+
+  Address         Publics by Value              Rva+Base       Lib:Object
+
+ 0001:000016c0       FightSim::UpdateEnergy       836016c0 f   fightsim:fightsim.obj
+ 0001:00001950       FightSim::UpdateFatigue      83601950 f   fightsim:fightsim.obj
+ 0001:00001b80       FightSim::UpdateHealth       83601b80 f   fightsim:fightsim.obj
+ 0001:00001e38       FightSim::UpdateInjury       83601e38 f   fightsim:fightsim.obj
+ 0001:00001e98       FightSim::UpdateKnockDown    83601e98 f   fightsim:fightsim.obj
+ 0001:000020d8       FightSim::UpdateFoul         836020d8 f   fightsim:fightsim.obj
+ 0001:000021f0       FightSim::UpdateSwelling     836021f0 f   fightsim:fightsim.obj
+ 0001:00002370       FightSim::UpdateCut          83602370 f   fightsim:fightsim.obj
+ 0001:00002d68       FightSim::ThrowPunch         83602d68 f   fightsim:fightsim.obj
+ 0001:00004868       RankingFormula::CalculateWinRank  83604868 f   rankingformula:rankingformula.obj
+ 0001:00004ab0       RankingFormula::CalculateLoseRank 83604ab0 f   rankingformula:rankingformula.obj
+ 0001:00005000       FMDebug::HandleInput         83605000 f   fmdebug:fmdebug.obj
+ 0001:00005200       cDebugMenu::cDebugMenu       83605200 f   debugmenu:debugmenu.obj
+ 0001:00005400       GameModeLegacy::Init         83605400 f   gamemodelegacy:gamemodelegacy.obj
+ 0002:00000100       g_fightSimVersion            82200100     fightsim:fightsim.obj
+
+ Static symbols
+
+ 0001:00006000       ?InternalHelper@FightSim@@AAEXXZ 83606000 f   fightsim:fightsim.obj
+ 0001:00006100       LegacyModeLogic::Tick        83606100 f   legacymode:legacymodelogic.obj
+
+ entry point at        0001:00000000

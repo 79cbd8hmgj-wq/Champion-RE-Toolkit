@@ -1,0 +1,14 @@
+ testmodule
+
+ Timestamp is 00000000 (Thu Jan 01 00:00:00 1970)
+
+ Preferred load address is 82000000
+
+ Start         Length     Name                   Class
+ 0001:00000000 00000100H .text                   CODE
+
+  Address         Publics by Value              Rva+Base       Lib:Object
+
+ 0001:00000000       Foo::Bar                     82000000 f   foo:foo.obj
+
+ entry point at        0001:00000000

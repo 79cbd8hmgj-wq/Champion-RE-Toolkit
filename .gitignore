@@ -1,0 +1,32 @@
+# Proprietary game artifacts must never be committed — see README.md.
+*.xex
+*.map
+*.xenon.map
+*.pdb
+*.xenon.pdb
+*.xdb
+*.xenon.xdb
+*.big
+*.BIG
+*.ast
+*.AST
+
+# Local index / build output
+.fncre/
+*.db
+*.sqlite3
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.eggs/
+.venv/
+venv/
+build/
+dist/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
