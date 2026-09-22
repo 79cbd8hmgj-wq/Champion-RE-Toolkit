@@ -23,30 +23,45 @@ never mistaken for (or accidentally gitignored as) a real MAP file.
 
 ## What "recover the demangled name" means here
 
-The task this toolkit was built for describes recovering "the demangled
-C++ name as represented in the MAP." That phrasing is deliberate: this
-phase does **not** implement an MSVC name-demangling algorithm. Xenon (like
-desktop MSVC) mangles C++ names with a scheme starting in `?`; correctly
-reversing that scheme (templates, calling conventions, cv-qualifiers,
-overload sets) is a substantial, error-prone undertaking on its own and is
-out of scope for a "trustworthy symbol engine" milestone — a wrong
-demangler is worse than none, because it would produce confident-looking
-but false names.
+Phase 1 of this toolkit described recovering "the demangled C++ name as
+represented in the MAP" and deliberately did **not** implement an MSVC
+name-demangling algorithm — at the time, no real FN5D/FN5Z MAP was
+available to confirm whether names even needed demangling (see the
+resolved-ambiguities note above: it turned out they do, almost always).
 
-Instead, `Symbol.demangled_name` reflects only what the MAP file itself
-already shows:
+Phase 2 adds `fncre.symbols.demangle`, a real demangling pass — but still
+not a homebrew one. **Backend: the `undname` PyPI package** (cffi bindings
+around a mature reimplementation of Microsoft's `UnDecorateSymbolName` /
+LLVM's `microsoftDemangle`). MSVC name mangling covers templates, calling
+conventions, cv-qualifiers, overload sets, operator names, and RTTI/vtable
+symbols; a partial homebrew implementation would either silently
+mis-demangle uncommon forms or need to reimplement most of that grammar
+anyway, and a wrong demangler is worse than none because it produces
+confident-looking but false names. `undname` was verified in this project
+against real FN5D symbol forms pulled from Fight-Night-Legacy's own
+evidence/test fixtures (see `tests/test_demangle.py`), including member
+functions, constructors/destructors, and multi-argument functions with
+pointer/struct parameters — all resolved correctly.
+
+`Symbol.demangled_name` reflects what's actually knowable:
 
 - If `raw_name` does **not** start with `?` (i.e. it isn't in MSVC mangled
   form), it's treated as already human-readable, and `demangled_name` is
-  set equal to it (this covers cases like `FightSim::UpdateEnergy` where
-  the toolchain's MAP output has already resolved the readable form).
-- If `raw_name` **does** start with `?`, `is_mangled` is `True` and
-  `demangled_name` is left `None`. `raw_name` is preserved so a real
-  demangler (a later phase, or an external tool like `undname`/
-  `msvc-demangler`) can be layered on top without re-parsing the MAP.
-
-This is why the toolkit never invents a demangled name — it surfaces
-exactly what's there and is explicit about what it doesn't know.
+  set equal to it.
+- If `raw_name` **does** start with `?`, demangling is opt-in and
+  best-effort: `fncre map index` runs it by default (disable with
+  `--no-demangle`), degrading gracefully to `demangled_name=None` when the
+  optional `undname` dependency isn't installed or a given name can't be
+  demangled. A symbol is never dropped because demangling failed.
+  `demangled_name` holds the bare qualified name (e.g.
+  `LegacyModeLogic::FightSim::UpdateEnergy`) so raw and demangled queries
+  stay comparable; the full formatted signature (return type, calling
+  convention, parameters) is kept separately in `demangled_signature`.
+  `namespace_path`/`leaf` are re-derived from the demangled structure when
+  available, via a best-effort heuristic over `undname`'s formatted output
+  (documented in `fncre/symbols/demangle.py`) — not guaranteed for every
+  declaration form (vtables, RTTI, operator overloads), but verified
+  against every real FN5D form seen so far.
 
 ## Duplicate handling
 
@@ -77,48 +92,59 @@ is called out explicitly because it is an assumption, not a directly
 verified fact about the real FN5D/FN5Z maps — see "Known ambiguities"
 below.
 
+## Resolved against Fight-Night-Legacy's real research corpus
+
+Two of this document's original "known ambiguities" have since been
+resolved by studying Fight-Night-Legacy's `research/fn5d-debug-legacy`
+branch — its own MAP tooling (`tools/map_symbols.py`) and derived, non-
+proprietary evidence (`evidence/fn5d/*_symbols.csv`) show the real format
+directly:
+
+- **Names are MSVC-decorated, not plain.** Real FN5D/FN5Z symbol names look
+  like `?UpdateEnergy@FightSim@LegacyModeLogic@@QAAXXZ`, never
+  `FightSim::UpdateEnergy` as literal MAP text — the plain form seen
+  elsewhere is Fight-Night-Legacy's own human-readable research label, not
+  what the linker actually emits. The parser's name column is therefore
+  `\S+` (a single token; decorated names never contain spaces), and
+  `fncre.symbols.demangle` (see below) is how a readable form gets
+  produced, on top of the raw text, never instead of it.
+- **The flags column supports `f` and `i`, singly or combined.**
+  Confirmed directly from `map_symbols.py`'s own regex
+  (`(?:\s+[fi])*`). `Symbol.is_function`/`is_internal`/`raw_flags` reflect
+  this; an absent letter is `None` (unknown), never guessed `False`. The
+  semantic meaning of `i` is still not documented anywhere in
+  Fight-Night-Legacy's own research either — it's structurally exposed,
+  not interpreted.
+
 ## Known ambiguities (not yet verified against a real FN5D/FN5Z MAP)
 
 No real `fn5d.xenon.map` or `fn5z.xenon.map` was available in the
 environment this toolkit was built in (see `docs/architecture.md` and the
 project's validation report for how this was confirmed). Everything below
 is a documented assumption based on the standard MSVC/Xenon linker MAP
-format and the facts given in the task description, not something
-confirmed against real output. **Run `fncre map parse` against your own
-copy of the real MAP and compare the reported stats and `--include-issues`
-output before trusting this toolkit's results for research.**
+format, not something confirmed against real output. **Run `fncre map
+parse` against your own copy of the real MAP and compare the reported
+stats and `--include-issues` output before trusting this toolkit's results
+for research.**
 
 Specific open questions:
 
-1. **Function/data flag.** The parser recognizes a trailing single-letter
-   `f` flag as "this is a function." It's unconfirmed whether the real
-   Xenon linker map uses exactly this flag, a different one, or omits it
-   for some/all entries. When absent, `Symbol.is_function` is `None`
-   (unknown), never guessed as `False`.
-2. **Whether names are pre-demangled.** The task's example symbols
-   (`FightSim::UpdateEnergy`, etc.) are already human-readable, which
-   suggests the real MAP may show undecorated names for at least some
-   symbols — but "many C++ names survive intact" (per the task) implies
-   others may not. The parser handles both cases per-symbol (see above),
-   but the real mix is unverified.
-3. **`Lib:Object` format.** Assumed to be `library:object.obj`, falling
+1. **`Lib:Object` format.** Assumed to be `library:object.obj`, falling
    back to a bare object name with no library when there's no `:`. Real
    Xenon maps may use different separators, omit the library for some
    entries, or use synthetic markers like `<internal>` — the parser
    doesn't special-case those beyond "no colon means no library."
-4. **Section resolution.** `Symbol.section` is resolved by looking up the
+2. **Section resolution.** `Symbol.section` is resolved by looking up the
    symbol's segment number in the "Start Length Name Class" table parsed
    earlier in the same file. If a real MAP's segment table uses a
    different header string or column layout, this silently produces
    `section = None` rather than a wrong section — but that failure mode is
    itself unverified against a real file.
-5. **Symbol names containing an 8-hex-digit run.** The symbol-row regex
-   finds the *address* column by looking for an 8-hex-digit token; a name
-   containing spaces followed by something that happens to look like 8 hex
-   digits (unlikely for C++ identifiers, more plausible for template
-   arguments or embedded literals) could misparse. Not observed in
-   practice, but not ruled out either.
-6. **Entry point address.** The MAP's `entry point at SEG:OFF` line is
+3. **`i` flag semantics.** Confirmed to exist and to combine with `f`
+   (see above), but what it means is not documented anywhere yet — treat
+   `Symbol.is_internal` as "the linker marked this with 'i'", not as any
+   particular claim about internal linkage.
+4. **Entry point address.** The MAP's `entry point at SEG:OFF` line is
    captured as `(segment, offset)`, not resolved to an absolute address —
    doing that correctly requires knowing each segment's own base within
    the loaded image, which this phase doesn't attempt. Cross-reference a

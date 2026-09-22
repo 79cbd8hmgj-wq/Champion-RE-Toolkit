@@ -80,3 +80,66 @@ fncre symbols stats fn5d
 Exit codes: `symbols exact` and `symbols address` return `1` when there are
 no matches (useful for scripting); other query subcommands always return
 `0` and print `(no matches)` when empty.
+
+Both `exact` and `search` match against the raw (decorated) name **and**
+the demangled name once `map index` has demangled the build, so
+`?UpdateEnergy@FightSim@LegacyModeLogic@@QAAXXZ` and
+`LegacyModeLogic::FightSim::UpdateEnergy` resolve to the same symbol.
+
+## `fncre build verify`
+
+Generalizes Fight-Night-Legacy's `evidence/*/build_identity.json` +
+`tools/re_validate_fn5d.py` gate: checks local artifacts against an
+identity JSON file before you trust anything derived from them.
+
+```bash
+fncre build verify fn5d --identity build_identity.json --map fn5d.xenon.map
+fncre build verify fn5d --identity build_identity.json \
+    --xex fn5d.xex --pe fn5d.pe --map fn5d.xenon.map
+```
+
+Exit code `0` only when every artifact you asked to check validated with
+zero errors (`report.all_requested_validated`); `1` otherwise. See
+`docs/architecture.md`'s "Build identity" section for the schema, and pass
+`--json` for the structured per-artifact `trust_level`
+(`artifact_unavailable` / `artifact_available` / `identity_validated`).
+
+## `fncre function show`
+
+Slices one function's raw bytes out of an extracted PE image, using the
+symbol index for boundary inference (next symbol's address).
+
+```bash
+fncre function show fn5d "LegacyModeLogic::FightSim::UpdateEnergy" --pe fn5d.pe
+fncre function show fn5d "?UpdateEnergy@FightSim@LegacyModeLogic@@QAAXXZ" --pe fn5d.pe
+fncre function show fn5d 0x836016C0 --pe fn5d.pe --show-words
+```
+
+`--pe` is an already-extracted PE image (see `fncre.xex.dev_extract` for
+extraction — no CLI wraps it yet in this phase). `--layout` defaults to
+`xbox_rva` (matching that extractor's output); use `pe_raw` for a
+conventional disk-layout PE. `--size N` overrides boundary inference
+(reported as `boundary: manual_override`) when you know the true size.
+
+## `fncre diff`
+
+Cross-build (e.g. FN5D vs FN5Z) comparison. Produces facts (matched,
+address moved, size changed, absent in one build, byte-identical, ...),
+never research conclusions — see `docs/provenance.md`.
+
+```bash
+# Symbol-level: requires both builds already indexed in the same --db
+fncre diff symbol fn5d fn5z "LegacyModeLogic::FightSim::UpdateEnergy"
+fncre diff namespace fn5d fn5z "LegacyModeLogic::FightSim"
+
+# Function-level: byte comparison, requires an extracted PE per build
+fncre diff function fn5d fn5z "LegacyModeLogic::FightSim::UpdateEnergy" \
+    --pe-a fn5d.pe --pe-b fn5z.pe
+```
+
+`diff function`'s classification is always one of `byte_identical`,
+`relocation_normalized_identical`, `structurally_similar`, or
+`different` — it never claims semantic equivalence from byte similarity
+alone. If a symbol can't be sliced in one build (e.g. build-exclusive
+functionality), the command reports `{"classification": "unresolved", ...}`
+and exits `1` rather than guessing.

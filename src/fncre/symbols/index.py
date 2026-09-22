@@ -306,6 +306,23 @@ class SymbolIndex:
         ).fetchall()
         return [_row_to_symbol(r) for r in rows]
 
+    def all_symbols(self, build_id: str) -> list[Symbol]:
+        rows = self._conn.execute(
+            "SELECT * FROM symbols WHERE build_id = ? ORDER BY order_index",
+            (build_id,),
+        ).fetchall()
+        return [_row_to_symbol(r) for r in rows]
+
+    def function_symbols(self, build_id: str) -> list[Symbol]:
+        """Symbols with the 'f' flag, sorted by address — the boundary set
+        `fncre.analysis.function_slice` needs to infer a function's end."""
+        rows = self._conn.execute(
+            "SELECT * FROM symbols WHERE build_id = ? AND is_function = 1 "
+            "AND address IS NOT NULL ORDER BY address",
+            (build_id,),
+        ).fetchall()
+        return [_row_to_symbol(r) for r in rows]
+
     def nearest_before(self, build_id: str, address: int) -> Symbol | None:
         row = self._conn.execute(
             """

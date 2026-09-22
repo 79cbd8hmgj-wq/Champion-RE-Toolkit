@@ -15,6 +15,7 @@ import sys
 from collections.abc import Sequence
 from dataclasses import asdict
 
+from fncre.cli import analysis_commands
 from fncre.symbols import demangle
 from fncre.symbols.index import DEFAULT_DB_PATH, SymbolIndex
 from fncre.symbols.map_parser import parse_map_file
@@ -225,6 +226,8 @@ def cmd_symbols_stats(args: argparse.Namespace) -> int:
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="fncre", description=__doc__)
     subparsers = parser.add_subparsers(dest="command", required=True)
+
+    analysis_commands.register(subparsers)
 
     # map
     map_parser = subparsers.add_parser("map", help="parse and index MAP files")
