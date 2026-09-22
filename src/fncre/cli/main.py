@@ -15,7 +15,7 @@ import sys
 from collections.abc import Sequence
 from dataclasses import asdict
 
-from fncre.cli import analysis_commands
+from fncre.cli import analysis_commands, resource_commands
 from fncre.symbols import demangle
 from fncre.symbols.index import DEFAULT_DB_PATH, SymbolIndex
 from fncre.symbols.map_parser import parse_map_file
@@ -228,6 +228,7 @@ def build_parser() -> argparse.ArgumentParser:
     subparsers = parser.add_subparsers(dest="command", required=True)
 
     analysis_commands.register(subparsers)
+    resource_commands.register(subparsers)
 
     # map
     map_parser = subparsers.add_parser("map", help="parse and index MAP files")

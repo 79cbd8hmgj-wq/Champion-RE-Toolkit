@@ -22,18 +22,29 @@ src/fncre/
   diff/
     symbol_diff.py      Cross-build symbol comparison
     function_diff.py    Byte-level, relocation-aware function comparison
+  attrib/
+    hash.py             EA AttribSys string hashing
+    keys.py             SQLite-backed hash -> text index (4-tier confidence)
+    keys_import.py      Parsers for generated-keys CSVs and wordlists
+    vault.py            .vlt/.bin chunk/export/fixup/class/collection parsing
+    values.py           AttribSys primitive/array value decoding
+    pipeline.py         Unified archive/vault -> resolved-tunables workflow
+  archive/
+    big.py              EA EB\0\x03 BIG archive parsing + safe extraction
+    chunkzip.py          Chunkzip v2 decompression
   cli/
     main.py            argparse-based `fncre` entry point (map/symbols commands)
     analysis_commands.py  build/function/diff subcommands
+    resource_commands.py  attrib/archive/tunables subcommands
 ```
 
-`structs/` and `archives/` are named in the north-star layout but still not
-created — AttribSys/BIG-archive tunable extraction is explicitly deferred to
-a later phase (see `docs/legacy-compatibility.md`). Every other package
-listed above generalizes an algorithm Fight-Night-Legacy's
-`research/fn5d-debug-legacy` branch already has working and tested;
-`docs/legacy-compatibility.md` records which source script each one came
-from and why (KEEP / WRAP / MIGRATE LATER / REPLACE AFTER PARITY).
+`structs/` is named in the north-star layout but still not created.
+Every other package listed above generalizes an algorithm Fight-Night-
+Legacy's `research/fn5d-debug-legacy` branch already has working and
+tested. `docs/legacy-compatibility.md` records which source script each
+one came from and why (KEEP / WRAP / MIGRATE LATER / REPLACE AFTER
+PARITY / CHAMPION-SPECIFIC KEEP); `docs/resource-pipeline.md` covers the
+`attrib`/`archive` layers' user-facing workflow and architecture in depth.
 
 ## Data flow
 

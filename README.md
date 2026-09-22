@@ -47,15 +47,28 @@ RE workflow):**
 - Cross-build (e.g. FN5D vs FN5Z) symbol and function diffing
   (`fncre.diff`).
 
-Every Phase 2 module that overlaps existing Fight-Night-Legacy tooling
+**Phase 3 (resource/tunable extraction pipeline):**
+
+- EA AttribSys string hashing, an attribute-key/hash index with four
+  distinct confidence levels, `.vlt`/`.bin` vault parsing, and primitive
+  value decoding (`fncre.attrib`).
+- EA BIG (`EB\0\x03`) archive parsing, chunkzip decompression, and
+  path-traversal-safe extraction (`fncre.archive`).
+- A unified `fncre tunables extract` workflow replacing what was five
+  separately-invoked Fight-Night-Legacy scripts, with a versioned
+  provenance schema tracing every value back to its exact archive
+  member/vault offset — see `docs/resource-pipeline.md`.
+
+Every Phase 2/3 module that overlaps existing Fight-Night-Legacy tooling
 generalizes that tooling's already-working algorithm rather than
 reimplementing it from scratch — see `docs/legacy-compatibility.md` for
-the script-by-script rationale.
+the script-by-script rationale. Champion-specific interpretation (what a
+resolved field name *means* in Legacy Mode) stays in Fight-Night-Legacy;
+`fncre` only resolves hashes to names and names to bytes.
 
 Explicitly **out of scope** so far (tracked for later phases): PDB
-parsing, XDB parsing, a full PPC decompiler, AttribSys/BIG-archive
-tunable extraction, Xenia integration, AI-assisted decompilation, and
-speculative struct reconstruction.
+parsing, XDB parsing, a full PPC decompiler, Xenia integration,
+AI-assisted decompilation, and speculative struct reconstruction.
 
 ## Install
 
@@ -107,8 +120,10 @@ defaults to `.fncre/index.db` in the current directory; override with
 
 See [docs/cli_usage.md](docs/cli_usage.md) for the full command reference,
 [docs/architecture.md](docs/architecture.md) for how the pieces fit
-together, and [docs/legacy-compatibility.md](docs/legacy-compatibility.md)
-for how this toolkit relates to Fight-Night-Legacy's existing scripts.
+together, [docs/resource-pipeline.md](docs/resource-pipeline.md) for the
+`attrib`/`archive`/`tunables` workflow in depth, and
+[docs/legacy-compatibility.md](docs/legacy-compatibility.md) for how this
+toolkit relates to Fight-Night-Legacy's existing scripts.
 
 ## Development
 
