@@ -1,0 +1,21 @@
+ fn5d
+
+ Timestamp is 4a1b2c3d (Mon Nov 23 10:15:41 2009)
+
+ Preferred load address is 82000000
+
+ Start         Length     Name                   Class
+ 0001:00000000 00010000H .text                   CODE
+
+  Address         Publics by Value              Rva+Base       Lib:Object
+
+ 0001:000016c0       ?UpdateEnergy@FightSim@LegacyModeLogic@@QAAXXZ 836016c0 f   fightsim:fightsim.obj
+ 0001:00001950       ?UpdateFatigue@FightSim@LegacyModeLogic@@QAAXXZ 83601950 f i fightsim:fightsim.obj
+ 0001:00001b80       ?ThrowPunch@FightSim@LegacyModeLogic@@QAAXXZ 836016c0 i   fightsim:fightsim.obj
+ 0001:00001b90       ??0FightSim@LegacyModeLogic@@QAA@XZ 83601b90     fightsim:fightsim.obj
+
+ Static symbols
+
+ 0001:00002000       ?UpdateEnergy@FightSim@LegacyModeLogic@@QAAXXZ 83602000 f   fightsim:fightsim_static.obj
+
+ entry point at        0001:00000000

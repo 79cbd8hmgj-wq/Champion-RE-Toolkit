@@ -56,9 +56,9 @@ _ENTRY_POINT_RE = re.compile(
 )
 _SYMBOL_ROW_RE = re.compile(
     r"^\s*(?P<seg>[0-9A-Fa-f]{4}):(?P<off>[0-9A-Fa-f]{8})\s+"
-    r"(?P<name>.+?)\s+"
+    r"(?P<name>\S+)\s+"
     r"(?P<addr>[0-9A-Fa-f]{8})"
-    r"(?:\s+(?P<flag>f))?"
+    r"(?P<flags>(?:\s+[fi])*)"
     r"(?:\s+(?P<libobj>\S+))?"
     r"\s*$"
 )
@@ -236,9 +236,15 @@ def _with_entry_point(header: MapHeader, match: re.Match[str]) -> MapHeader:
 def _build_symbol(
     match: re.Match[str], visibility: Visibility, order_index: int, lineno: int
 ) -> Symbol:
-    raw_name = match.group("name").strip()
-    name = re.sub(r"\s+", " ", raw_name)
+    # The name column is a single non-whitespace token (\S+): real FN5D/FN5Z
+    # MAP files carry MSVC-decorated names here, which never contain spaces.
+    # See docs/provenance.md for how this was confirmed against
+    # Fight-Night-Legacy's own map_symbols.py and evidence CSVs.
+    raw_name = match.group("name")
+    name = raw_name
     is_mangled = raw_name.startswith("?")
+    # This module never invents a demangled form; fncre.symbols.demangle
+    # fills this in as a separate, optional pass over a ParsedMap.
     demangled_name = None if is_mangled else name
 
     namespace_path: str | None = None
@@ -257,8 +263,14 @@ def _build_symbol(
         else:
             object_name = libobj
 
-    flag = match.group("flag")
-    is_function: bool | None = True if flag == "f" else None
+    # The flags column is zero or more space-separated single-letter flags
+    # (observed: 'f' function, 'i' — meaning not yet confirmed by Legacy's
+    # own research either; see docs/provenance.md). Both may appear together
+    # ("f i"). Absence of a letter means "unknown", never "False".
+    raw_flags = " ".join(match.group("flags").split())
+    flag_letters = set(raw_flags.split())
+    is_function: bool | None = True if "f" in flag_letters else None
+    is_internal: bool | None = True if "i" in flag_letters else None
 
     return Symbol(
         raw_name=raw_name,
@@ -273,6 +285,8 @@ def _build_symbol(
         object_name=object_name,
         visibility=visibility,
         is_function=is_function,
+        is_internal=is_internal,
+        raw_flags=raw_flags,
         order_index=order_index,
         source_line=lineno,
         namespace_path=namespace_path,

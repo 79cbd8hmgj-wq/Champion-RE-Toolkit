@@ -27,22 +27,48 @@ contain, game files.
 See [docs/provenance.md](docs/provenance.md) for the fuller policy this
 project follows on evidence, sourcing, and what "demangled" means here.
 
-## Current scope (Phase 1: symbol engine)
+## Current scope
 
-This phase implements a trustworthy MAP-file symbol engine:
+**Phase 1 (symbol engine):** a parser for Xenon (Xbox 360) MSVC-style
+linker MAP files (`fncre.symbols.map_parser`), a normalized `Symbol` model
+(`fncre.symbols.models`), a deterministic SQLite-backed index
+(`fncre.symbols.index`), and a `fncre` CLI to index and query MAP files.
 
-- A parser for Xenon (Xbox 360) MSVC-style linker MAP files
-  (`fncre.symbols.map_parser`).
-- A normalized `Symbol` model that preserves raw MAP text alongside
-  searchable fields (`fncre.symbols.models`).
-- A deterministic SQLite-backed index with a clean Python query API
-  (`fncre.symbols.index`).
-- A `fncre` CLI to index and query MAP files.
+**Phase 2 (automation primitives generalized from Fight-Night-Legacy's own
+RE workflow):**
 
-Explicitly **out of scope** for this phase (tracked for later phases):
-XEX loading, PowerPC disassembly, PDB parsing, XDB parsing, BIG/AST
-extraction, Xenia integration, AI-assisted decompilation, and speculative
-struct reconstruction.
+- MSVC C++ name demangling (`fncre.symbols.demangle`), corrected MAP
+  parsing for the real decorated-name/flag format.
+- XEX2 dev-key extraction and PE/VA addressing (`fncre.xex`).
+- Direct PowerPC branch decoding (`fncre.ppc`).
+- Function-boundary slicing and branch cross-referencing
+  (`fncre.analysis`).
+- Generalized build-identity verification (`fncre.build`).
+- Cross-build (e.g. FN5D vs FN5Z) symbol and function diffing
+  (`fncre.diff`).
+
+**Phase 3 (resource/tunable extraction pipeline):**
+
+- EA AttribSys string hashing, an attribute-key/hash index with four
+  distinct confidence levels, `.vlt`/`.bin` vault parsing, and primitive
+  value decoding (`fncre.attrib`).
+- EA BIG (`EB\0\x03`) archive parsing, chunkzip decompression, and
+  path-traversal-safe extraction (`fncre.archive`).
+- A unified `fncre tunables extract` workflow replacing what was five
+  separately-invoked Fight-Night-Legacy scripts, with a versioned
+  provenance schema tracing every value back to its exact archive
+  member/vault offset — see `docs/resource-pipeline.md`.
+
+Every Phase 2/3 module that overlaps existing Fight-Night-Legacy tooling
+generalizes that tooling's already-working algorithm rather than
+reimplementing it from scratch — see `docs/legacy-compatibility.md` for
+the script-by-script rationale. Champion-specific interpretation (what a
+resolved field name *means* in Legacy Mode) stays in Fight-Night-Legacy;
+`fncre` only resolves hashes to names and names to bytes.
+
+Explicitly **out of scope** so far (tracked for later phases): PDB
+parsing, XDB parsing, a full PPC decompiler, Xenia integration,
+AI-assisted decompilation, and speculative struct reconstruction.
 
 ## Install
 
@@ -51,6 +77,11 @@ python3 -m venv .venv
 source .venv/bin/activate
 pip install -e ".[dev]"
 ```
+
+`undname` (MSVC demangling) and `cryptography` (XEX extraction) are
+optional extras included in `[dev]`; install them standalone with
+`pip install -e ".[demangle]"` / `pip install -e ".[xex]"` if you only
+need the base symbol engine otherwise.
 
 ## CLI usage
 
@@ -68,19 +99,31 @@ fncre symbols address fn5d 0x83601B80
 fncre symbols range fn5d 0x83601000 0x83603000
 fncre symbols object fn5d "fightsim.obj"
 fncre symbols library fn5d "fightsim"
-fncre symbols namespace fn5d "FightSim"
+fncre symbols namespace fn5d "LegacyModeLogic::FightSim"
 fncre symbols visibility fn5d public
 fncre symbols nearest fn5d 0x836016C5
 fncre symbols stats fn5d
+
+# Raw decorated names and demangled names both resolve to the same symbol
+fncre symbols exact fn5d '?UpdateEnergy@FightSim@LegacyModeLogic@@QAAXXZ'
+fncre symbols exact fn5d 'LegacyModeLogic::FightSim::UpdateEnergy'
+
+# Build-identity verification, function slicing, cross-build diffing
+fncre build verify fn5d --identity build_identity.json --map fn5d.xenon.map
+fncre function show fn5d "LegacyModeLogic::FightSim::UpdateEnergy" --pe fn5d.pe
+fncre diff symbol fn5d fn5z "LegacyModeLogic::FightSim::UpdateEnergy"
 ```
 
-Add `--json` to any `symbols` or `map` subcommand for machine-readable
-output. The index defaults to `.fncre/index.db` in the current directory;
-override with `--db`.
+Add `--json` to any subcommand for machine-readable output. The index
+defaults to `.fncre/index.db` in the current directory; override with
+`--db`.
 
-See [docs/cli_usage.md](docs/cli_usage.md) for full command reference and
+See [docs/cli_usage.md](docs/cli_usage.md) for the full command reference,
 [docs/architecture.md](docs/architecture.md) for how the pieces fit
-together.
+together, [docs/resource-pipeline.md](docs/resource-pipeline.md) for the
+`attrib`/`archive`/`tunables` workflow in depth, and
+[docs/legacy-compatibility.md](docs/legacy-compatibility.md) for how this
+toolkit relates to Fight-Night-Legacy's existing scripts.
 
 ## Development
 
