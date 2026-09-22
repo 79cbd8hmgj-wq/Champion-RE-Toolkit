@@ -19,10 +19,18 @@ classifiers = [
 dependencies = []
 
 [project.optional-dependencies]
+demangle = [
+    "undname>=0.2",
+]
+xex = [
+    "cryptography>=41",
+]
 dev = [
     "pytest>=7.4",
     "ruff>=0.4",
     "mypy>=1.8",
+    "undname>=0.2",
+    "cryptography>=41",
 ]
 
 [project.scripts]

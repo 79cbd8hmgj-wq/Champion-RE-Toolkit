@@ -15,6 +15,7 @@ import sys
 from collections.abc import Sequence
 from dataclasses import asdict
 
+from fncre.symbols import demangle
 from fncre.symbols.index import DEFAULT_DB_PATH, SymbolIndex
 from fncre.symbols.map_parser import parse_map_file
 from fncre.symbols.models import Symbol
@@ -51,14 +52,32 @@ def _print_symbols(symbols: list[Symbol], as_json: bool) -> None:
 
 def cmd_map_index(args: argparse.Namespace) -> int:
     parsed = parse_map_file(args.map_path)
+    demangled_count = 0
+    if not args.no_demangle:
+        if demangle.is_available():
+            before = [s.demangled_name for s in parsed.symbols]
+            parsed = demangle.demangle_parsed_map(parsed)
+            demangled_count = sum(
+                1
+                for old, sym in zip(before, parsed.symbols, strict=True)
+                if old is None and sym.demangled_name is not None
+            )
+        elif not args.json:
+            print(
+                "note: 'undname' is not installed, so decorated names were not "
+                "demangled (pip install 'fncre[demangle]'). Continuing without it."
+            )
     with SymbolIndex(args.db) as index:
         summary = index.index_parsed_map(args.build, parsed)
     if args.json:
-        print(json.dumps(asdict(summary), indent=2))
+        payload = asdict(summary)
+        payload["demangled_count"] = demangled_count
+        print(json.dumps(payload, indent=2))
     else:
         print(f"Indexed build '{args.build}' from {parsed.source_path}")
         print(f"  db: {args.db}")
         print(f"  total symbols   : {summary.total_symbols}")
+        print(f"  demangled       : {demangled_count}")
         print(f"  public / static : {summary.public_count} / {summary.static_count}")
         print(
             f"  function / data / unknown-kind : "
@@ -218,6 +237,9 @@ def build_parser() -> argparse.ArgumentParser:
         "--db", default=DEFAULT_DB_PATH, help=f"index DB path (default {DEFAULT_DB_PATH})"
     )
     p_index.add_argument("--json", action="store_true")
+    p_index.add_argument(
+        "--no-demangle", action="store_true", help="skip MSVC name demangling"
+    )
     p_index.set_defaults(func=cmd_map_index)
 
     p_parse = map_sub.add_parser("parse", help="parse a MAP file without indexing it")

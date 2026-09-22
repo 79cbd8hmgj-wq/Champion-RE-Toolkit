@@ -56,10 +56,14 @@ class Symbol:
     name: str
     """Normalized name used for lookups (collapses internal whitespace runs)."""
     demangled_name: str | None
-    """The MAP's own human-readable form, if `raw_name` already looks undecorated.
+    """Bare qualified name with no signature noise, e.g. 'Foo::Bar'.
 
-    This toolkit does not implement its own C++ name demangler in this phase;
-    it only surfaces what the MAP already represents (see docs/provenance.md).
+    For an already-undecorated symbol this equals `name`. For a decorated
+    (MSVC-mangled) symbol this is filled in only by the optional
+    `fncre.symbols.demangle` pass, using its extracted qualified name (not
+    the full signature) so raw and demangled queries stay directly
+    comparable. See docs/provenance.md for the demangler backend and its
+    limitations.
     """
     is_mangled: bool
     """True if `raw_name` looks like an MSVC-decorated name (starts with '?')."""
@@ -81,7 +85,11 @@ class Symbol:
     visibility: Visibility
     """'public' or 'static', per which MAP section the symbol was listed under."""
     is_function: bool | None
-    """True/False if the MAP's function flag ('f') let us tell; None if unknown."""
+    """True if the MAP's 'f' flag was present; None if unknown (never False)."""
+    is_internal: bool | None
+    """True if the MAP's 'i' flag was present; None if unknown (never False)."""
+    raw_flags: str
+    """Space-normalized raw flag letters as they appeared, e.g. '', 'f', 'f i'."""
 
     order_index: int
     """0-based index in overall parse order (stable across public/static)."""
@@ -92,6 +100,10 @@ class Symbol:
     """Everything before the final '::' in `name`, e.g. 'FightSim'. None if flat."""
     leaf: str | None = field(default=None)
     """The final '::'-separated component of `name`, e.g. 'UpdateEnergy'."""
+    demangled_signature: str | None = field(default=None)
+    """Full demangled signature (return type, calling convention, params),
+    e.g. 'public: void __cdecl LegacyModeLogic::FightSim::UpdateEnergy(void)'.
+    Only ever set by `fncre.symbols.demangle`; None otherwise."""
 
 
 @dataclass

@@ -44,6 +44,7 @@ CREATE TABLE IF NOT EXISTS symbols (
     raw_name TEXT NOT NULL,
     name TEXT NOT NULL,
     demangled_name TEXT,
+    demangled_signature TEXT,
     is_mangled INTEGER NOT NULL,
     address INTEGER,
     segment INTEGER,
@@ -53,6 +54,8 @@ CREATE TABLE IF NOT EXISTS symbols (
     object_name TEXT,
     visibility TEXT NOT NULL,
     is_function INTEGER,
+    is_internal INTEGER,
+    raw_flags TEXT NOT NULL DEFAULT '',
     order_index INTEGER NOT NULL,
     source_line INTEGER NOT NULL,
     namespace_path TEXT,
@@ -154,11 +157,12 @@ class SymbolIndex:
             conn.executemany(
                 """
                 INSERT INTO symbols (
-                    build_id, raw_name, name, demangled_name, is_mangled,
+                    build_id, raw_name, name, demangled_name, demangled_signature,
+                    is_mangled,
                     address, segment, offset, section, library, object_name,
-                    visibility, is_function, order_index, source_line,
-                    namespace_path, leaf
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    visibility, is_function, is_internal, raw_flags,
+                    order_index, source_line, namespace_path, leaf
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """,
                 (
                     (
@@ -166,6 +170,7 @@ class SymbolIndex:
                         sym.raw_name,
                         sym.name,
                         sym.demangled_name,
+                        sym.demangled_signature,
                         int(sym.is_mangled),
                         sym.address,
                         sym.segment,
@@ -175,6 +180,8 @@ class SymbolIndex:
                         sym.object_name,
                         sym.visibility,
                         None if sym.is_function is None else int(sym.is_function),
+                        None if sym.is_internal is None else int(sym.is_internal),
+                        sym.raw_flags,
                         sym.order_index,
                         sym.source_line,
                         sym.namespace_path,
@@ -219,20 +226,30 @@ class SymbolIndex:
     # -- queries ---------------------------------------------------------
 
     def exact(self, build_id: str, name: str) -> list[Symbol]:
+        """Exact lookup by raw (decorated) name OR demangled name.
+
+        A query like ``?UpdateEnergy@FightSim@LegacyModeLogic@@QAAXXZ`` and
+        ``LegacyModeLogic::FightSim::UpdateEnergy`` (once demangled) both
+        resolve to the same row.
+        """
         rows = self._conn.execute(
-            "SELECT * FROM symbols WHERE build_id = ? AND name = ? ORDER BY order_index",
-            (build_id, name),
+            "SELECT * FROM symbols WHERE build_id = ? "
+            "AND (name = ? OR demangled_name = ?) ORDER BY order_index",
+            (build_id, name, name),
         ).fetchall()
         return [_row_to_symbol(r) for r in rows]
 
     def search(self, build_id: str, substring: str, limit: int = 200) -> list[Symbol]:
+        """Substring search over both the raw name and the demangled name."""
+        pattern = f"%{_escape_like(substring)}%"
         rows = self._conn.execute(
             """
             SELECT * FROM symbols
-            WHERE build_id = ? AND name LIKE ? ESCAPE '\\'
+            WHERE build_id = ?
+              AND (name LIKE ? ESCAPE '\\' OR demangled_name LIKE ? ESCAPE '\\')
             ORDER BY order_index LIMIT ?
             """,
-            (build_id, f"%{_escape_like(substring)}%", limit),
+            (build_id, pattern, pattern, limit),
         ).fetchall()
         return [_row_to_symbol(r) for r in rows]
 
@@ -321,6 +338,7 @@ def _row_to_symbol(row: sqlite3.Row) -> Symbol:
         raw_name=row["raw_name"],
         name=row["name"],
         demangled_name=row["demangled_name"],
+        demangled_signature=row["demangled_signature"],
         is_mangled=bool(row["is_mangled"]),
         address=row["address"],
         segment=row["segment"],
@@ -330,6 +348,8 @@ def _row_to_symbol(row: sqlite3.Row) -> Symbol:
         object_name=row["object_name"],
         visibility=row["visibility"],
         is_function=None if row["is_function"] is None else bool(row["is_function"]),
+        is_internal=None if row["is_internal"] is None else bool(row["is_internal"]),
+        raw_flags=row["raw_flags"],
         order_index=row["order_index"],
         source_line=row["source_line"],
         namespace_path=row["namespace_path"],
