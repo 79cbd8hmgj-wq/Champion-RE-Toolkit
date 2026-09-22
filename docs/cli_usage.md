@@ -143,3 +143,58 @@ fncre diff function fn5d fn5z "LegacyModeLogic::FightSim::UpdateEnergy" \
 alone. If a symbol can't be sliced in one build (e.g. build-exclusive
 functionality), the command reports `{"classification": "unresolved", ...}`
 and exits `1` rather than guessing.
+
+## `fncre attrib`
+
+EA AttribSys string hashing, attribute-key resolution, and `.vlt`/`.bin`
+vault inspection/extraction. See `docs/resource-pipeline.md` for the full
+workflow this feeds into.
+
+```bash
+# Hashing (exact parity with Fight-Night-Legacy's tools/attrib_hash.py)
+fncre attrib hash fight_sim scheduling
+fncre attrib hash-file candidate_keys.txt --json
+
+# Attribute-key index: four confidence levels, never collapsed
+fncre attrib keys import fn5d_generated_keys.csv --build fn5d   # -> evidenced
+fncre attrib keys import wordlist.txt --build fn5d --status generated
+fncre attrib keys search fn5d "fight_sim"
+fncre attrib keys lookup fn5d 0xA9244D34
+fncre attrib keys stats fn5d
+
+# Vault inspection/extraction
+fncre attrib inspect attribdb.vlt
+fncre attrib extract attribdb.vlt --bin attribdb.bin \
+    --build fn5d --class-name fe_legacy --collection fight_sim \
+    --keys fn5d_keys.db --json
+```
+
+## `fncre archive`
+
+EA BIG (`EB\0\x03`) archive inspection and extraction, generalizing
+Fight-Night-Legacy's `tools/ea_eb_extract.py`.
+
+```bash
+fncre archive inspect boot_other.big
+fncre archive list boot_other.big --match attrib
+fncre archive extract boot_other.big --output extracted/ --match attribdb
+```
+
+`archive extract` rejects path traversal explicitly (a crafted or
+corrupted archive with `../`-style entry paths cannot write outside
+`--output`) and decompresses chunkzip-wrapped members by default; pass
+`--keep-chunkzip` to get the raw wrapped bytes instead.
+
+## `fncre tunables extract`
+
+The unified pipeline: detects whether `--input` is a BIG archive or a
+direct `.vlt` file, runs every stage needed, and writes a
+provenance-carrying JSON file. See `docs/resource-pipeline.md` for the
+full schema and the archive → vault → resolved-values architecture.
+
+```bash
+fncre tunables extract \
+    --build fn5d --input boot_other.big \
+    --class-name fe_legacy --collection fight_sim \
+    --keys fn5d_keys.db --output derived/
+```
